@@ -33,10 +33,11 @@ def get_images_paths(input_dir: str, plants_names: list, growth_stages: list):
 
 def load_images(images_dict: dict):
     loaded_images = {}
-    for plant_name, growth_stages in tqdm(images_dict.items()):
+    for plant_name, growth_stages in images_dict.items():
         loaded_images.setdefault(plant_name, {})
-        for growth_stage, image_path_list in tqdm(growth_stages.items()):
+        for growth_stage, image_path_list in growth_stages.items():
             loaded_images[plant_name].setdefault(growth_stage, [])
+            _logger.info(f'Loading images for {plant_name} - {growth_stage}')
             for image_path in tqdm(image_path_list):
                 image = cv2.imread(image_path)
                 loaded_images[plant_name][growth_stage].append((image_path, image))
@@ -95,8 +96,9 @@ def create_output_directories(loaded_images_dict, output_dir):
 
 
 def run_segmentation(loaded_images_dict, output_dir):
-    for plant_name, growth_stages in tqdm(loaded_images_dict.items()):
-        for growth_stage, image_tuple_list in tqdm(growth_stages.items()):
+    for plant_name, growth_stages in loaded_images_dict.items():
+        for growth_stage, image_tuple_list in growth_stages.items():
+            _logger.info(f'Segmenting images for {plant_name} - {growth_stage}')
             for image_path, image in tqdm(image_tuple_list):
                 image_name = os.path.basename(image_path)
                 output_path = os.path.join(output_dir, plant_name, growth_stage, image_name)
