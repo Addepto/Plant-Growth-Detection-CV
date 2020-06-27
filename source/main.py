@@ -2,6 +2,7 @@ import logging
 import os
 
 import cv2
+import numpy as np
 from plantcv import plantcv
 from tqdm import tqdm
 
@@ -85,7 +86,7 @@ def segment(image):
     masked = plantcv.apply_mask(img=resized, mask=ab_fill, mask_color='white')
     # cv2.imshow('res', masked)
     # cv2.waitKey(0)
-    return masked
+    return resized, masked
 
 
 def create_output_directories(loaded_images_dict, output_dir):
@@ -95,7 +96,11 @@ def create_output_directories(loaded_images_dict, output_dir):
             os.makedirs(final_dir_path, exist_ok=True)
 
 
-def run_segmentation(loaded_images_dict, output_dir):
+def combine_images(image1, image2):
+    return np.hstack((image1, image2))
+
+
+def run_segmentation(loaded_images_dict, output_dir, should_combine_images=False):
     for plant_name, growth_stages in loaded_images_dict.items():
         for growth_stage, image_tuple_list in growth_stages.items():
             _logger.info(f'Segmenting images for {plant_name} - {growth_stage}')
@@ -103,8 +108,10 @@ def run_segmentation(loaded_images_dict, output_dir):
                 image_name = os.path.basename(image_path)
                 output_path = os.path.join(output_dir, plant_name, growth_stage, image_name)
                 _logger.info(f'Running segmentation for the image: {image_name}')
-                result = segment(image)
+                source, result = segment(image)
                 _logger.info(f'Writing result to: {output_path}')
+                if should_combine_images:
+                    result = combine_images(source, result)
                 cv2.imwrite(output_path, result)
 
 
@@ -125,7 +132,7 @@ def run():
     _logger.info('Creating image directories in: {output_dir}'.format(output_dir=args.output_dir))
     create_output_directories(loaded_images_dict, args.output_dir)
     _logger.info('Running segmentation...')
-    run_segmentation(loaded_images_dict, args.output_dir)
+    run_segmentation(loaded_images_dict, args.output_dir, should_combine_images=True)
 
     # sample_image = loaded_images_dict['Beta vulgaris']['Cotyledon'][0]
     # segment(sample_image)
