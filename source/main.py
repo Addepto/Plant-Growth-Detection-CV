@@ -10,6 +10,7 @@ import cli
 from kws_logging import config_logger
 
 DEBUG = False
+VISUALIZE = False
 _logger = logging.getLogger('kws')
 
 
@@ -48,44 +49,86 @@ def load_images(images_dict: dict):
 def segment(image):
     scale = 0.25
     resized = cv2.resize(image, dsize=None, fx=scale, fy=scale)
-    # cv2.imshow('a', resized)
-    # cv2.waitKey(0)
+    if VISUALIZE:
+        cv2.imshow('a', resized)
+        cv2.waitKey(0)
 
     masked_a = plantcv.rgb2gray_lab(rgb_img=resized, channel='a')
-    # cv2.imshow('a', masked_a)
-    # cv2.waitKey(0)
+    if VISUALIZE:
+        cv2.imshow('a', masked_a)
+        cv2.waitKey(0)
 
     masked_b = plantcv.rgb2gray_lab(rgb_img=resized, channel='b')
-    # cv2.imshow('b', masked_b)
-    # cv2.waitKey(0)
+    if VISUALIZE:
+        cv2.imshow('b', masked_b)
+        cv2.waitKey(0)
 
-    maskeda_thresh = plantcv.threshold.binary(gray_img=masked_a, threshold=128,
+    e = plantcv.rgb2gray_hsv(rgb_img=resized, channel='h')
+    if VISUALIZE:
+        cv2.imshow('e', e)
+        cv2.waitKey(0)
+
+    maskedh_thresh = plantcv.threshold.binary(gray_img=masked_a, threshold=120,
                                               max_value=255, object_type='dark')
-    # cv2.imshow('a', maskeda_thresh)
-    # cv2.waitKey(0)
-    maskeda_thresh1 = plantcv.threshold.binary(gray_img=masked_a, threshold=155,
-                                               max_value=255, object_type='light')
-    # cv2.imshow('b', maskeda_thresh1)
-    # cv2.waitKey(0)
-    maskedb_thresh = plantcv.threshold.binary(gray_img=masked_b, threshold=170,
+    if VISUALIZE:
+        cv2.imshow('x', maskedh_thresh)
+        cv2.waitKey(0)
+
+    e = plantcv.rgb2gray_hsv(rgb_img=resized, channel='s')
+    if VISUALIZE:
+        cv2.imshow('e', e)
+        cv2.waitKey(0)
+
+    maskeds_thresh = plantcv.threshold.binary(gray_img=masked_a, threshold=150,
                                               max_value=255, object_type='light')
-    # cv2.imshow('c', maskedb_thresh)
-    # cv2.waitKey(0)
+    if VISUALIZE:
+        cv2.imshow('x', maskeds_thresh)
+        cv2.waitKey(0)
+
+    hs = plantcv.logical_or(bin_img1=maskedh_thresh, bin_img2=maskeds_thresh)
+    if VISUALIZE:
+        cv2.imshow('x', hs)
+        cv2.waitKey(0)
+
+    maskeda_thresh = plantcv.threshold.binary(gray_img=masked_a, threshold=120,
+                                              max_value=255, object_type='dark')
+    if VISUALIZE:
+        cv2.imshow('a', maskeda_thresh)
+        cv2.waitKey(0)
+    maskeda_thresh1 = plantcv.threshold.binary(gray_img=masked_a, threshold=150,
+                                               max_value=255, object_type='light')
+    if VISUALIZE:
+        cv2.imshow('b', maskeda_thresh1)
+        cv2.waitKey(0)
+    maskedb_thresh = plantcv.threshold.binary(gray_img=masked_b, threshold=165,
+                                              max_value=255, object_type='light')
+    if VISUALIZE:
+        cv2.imshow('c', maskedb_thresh)
+        cv2.waitKey(0)
 
     ab1 = plantcv.logical_or(bin_img1=maskeda_thresh, bin_img2=maskedb_thresh)
-    # cv2.imshow('a', ab1)
-    # cv2.waitKey(0)
+    if VISUALIZE:
+        cv2.imshow('a', ab1)
+        cv2.waitKey(0)
     ab = plantcv.logical_or(bin_img1=maskeda_thresh1, bin_img2=ab1)
-    # cv2.imshow('b', ab)
-    # cv2.waitKey(0)
+    if VISUALIZE:
+        cv2.imshow('b', ab)
+        cv2.waitKey(0)
 
     ab_fill = plantcv.fill(bin_img=ab, size=500)
-    # cv2.imshow('ab', ab_fill)
-    # cv2.waitKey(0)
+    if VISUALIZE:
+        cv2.imshow('ab', ab_fill)
+        cv2.waitKey(0)
 
-    masked = plantcv.apply_mask(img=resized, mask=ab_fill, mask_color='white')
-    # cv2.imshow('res', masked)
-    # cv2.waitKey(0)
+    mask = plantcv.logical_and(ab_fill, hs)
+    if VISUALIZE:
+        cv2.imshow('mask', mask)
+        cv2.waitKey(0)
+
+    masked = plantcv.apply_mask(img=resized, mask=mask, mask_color='white')
+    if VISUALIZE:
+        cv2.imshow('res', masked)
+        cv2.waitKey(0)
     return resized, masked
 
 
@@ -108,7 +151,11 @@ def run_segmentation(loaded_images_dict, output_dir, should_combine_images=False
                 image_name = os.path.basename(image_path)
                 output_path = os.path.join(output_dir, plant_name, growth_stage, image_name)
                 _logger.info(f'Running segmentation for the image: {image_name}')
-                source, result = segment(image)
+                # if image_name != 'Beta-vulgaris_Cotyledon_Substrat1_07102019_darker (1).JPG':
+                #     continue
+                # if image_name != 'Beta-vulgaris_CotyledonPhase_Substrat1_27082019 (5).JPG':
+                #     continue
+                source, result  = segment(image)
                 _logger.info(f'Writing result to: {output_path}')
                 if should_combine_images:
                     result = combine_images(source, result)
