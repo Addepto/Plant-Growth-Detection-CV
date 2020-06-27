@@ -5,6 +5,8 @@ from plantcv import plantcv
 
 import cli
 
+DEBUG = False
+
 
 def get_images_paths(input_dir: str, plants_names: list, growth_stages: list):
     images_paths = {}
@@ -77,6 +79,14 @@ def segment(image):
     masked = plantcv.apply_mask(img=resized, mask=ab_fill, mask_color='white')
     cv2.imshow('res', masked)
     cv2.waitKey(0)
+    return masked
+
+
+def create_output_directories(loaded_images_dict, output_dir):
+    for plant_name in loaded_images_dict.keys():
+        for growth_stage in loaded_images_dict[plant_name].keys():
+            final_dir_path = os.path.join(output_dir, plant_name, growth_stage)
+            os.makedirs(final_dir_path, exist_ok=True)
 
 
 def run():
@@ -86,8 +96,10 @@ def run():
     images_dict = get_images_paths(args.input_dir, args.plants_names, args.growth_stages)
     loaded_images_dict = load_images(images_dict)
 
-    sample_image = loaded_images_dict['Beta vulgaris']['Cotyledon'][0]
-    segment(sample_image)
+    create_output_directories(loaded_images_dict, args.output_dir)
+
+    # sample_image = loaded_images_dict['Beta vulgaris']['Cotyledon'][0]
+    # segment(sample_image)
 
 
 if __name__ == '__main__':

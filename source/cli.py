@@ -10,4 +10,6 @@ def create_parser():
                         help='Which plants should be analyzed (names of the directories).', )
     parser.add_argument('--growth_stages', type=str, nargs='+', default=['Cotyledon'],
                         help='Which growth stages should be analyzed (names of the directories)')
+    parser.add_argument_group('Output definition', 'Info needed for the output')
+    parser.add_argument('--output_dir', type=str, help='Path to the output directory.', required=True)
     return parser
