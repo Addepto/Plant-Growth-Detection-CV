@@ -12,6 +12,7 @@ from kws_logging import config_logger
 DEBUG = False
 VISUALIZE = False
 _logger = logging.getLogger('kws')
+# plantcv.params.debug = 'print'
 
 
 def get_images_paths(input_dir: str, plants_names: list, growth_stages: list):
@@ -129,7 +130,33 @@ def segment(image):
     if VISUALIZE:
         cv2.imshow('res', masked)
         cv2.waitKey(0)
-    return resized, masked
+    return resized, masked, mask
+
+
+def postprocess_mask(image, masked, mask):
+    id_objects, obj_hierarchy = plantcv.find_objects(masked, mask)
+    height, width, _ = masked.shape
+    x = width // 4
+    y = height // 4
+    roi_size = min(height, width) // 2
+    roi1, roi_hierarchy = plantcv.roi.rectangle(img=masked, x=x, y=y, h=roi_size, w=roi_size)
+    roi_objects, hierarchy, kept_mask, obj_area = plantcv.roi_objects(img=image, roi_contour=roi1,
+                                                                      roi_hierarchy=roi_hierarchy,
+                                                                      object_contour=id_objects,
+                                                                      obj_hierarchy=obj_hierarchy,
+                                                                      roi_type='partial')
+    obj, image_mask = plantcv.object_composition(img=image, contours=roi_objects, hierarchy=hierarchy)
+
+    cv2.imshow('source', image)
+    cv2.waitKey(0)
+    if image_mask is not None:
+        cv2.imshow('watershed', image_mask)
+        cv2.waitKey(0)
+
+
+def instance_segmentation(image, mask):
+    watershed = plantcv.watershed_segmentation(image, mask, distance=75)
+    return watershed
 
 
 def create_output_directories(loaded_images_dict, output_dir):
@@ -155,7 +182,9 @@ def run_segmentation(loaded_images_dict, output_dir, should_combine_images=False
                 #     continue
                 # if image_name != 'Beta-vulgaris_CotyledonPhase_Substrat1_27082019 (5).JPG':
                 #     continue
-                source, result  = segment(image)
+                source, result, mask = segment(image)
+                postprocess_mask(source, result, mask)
+                instance_segmentation(result, mask)
                 _logger.info(f'Writing result to: {output_path}')
                 if should_combine_images:
                     result = combine_images(source, result)
