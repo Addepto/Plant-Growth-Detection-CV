@@ -147,11 +147,14 @@ def postprocess_mask(image, masked, mask):
                                                                       roi_type='partial')
     obj, image_mask = plantcv.object_composition(img=image, contours=roi_objects, hierarchy=hierarchy)
 
-    cv2.imshow('source', image)
-    cv2.waitKey(0)
-    if image_mask is not None:
+    if VISUALIZE:
+        cv2.imshow('source', image)
+        cv2.waitKey(0)
+    if image_mask is not None and VISUALIZE:
         cv2.imshow('watershed', image_mask)
         cv2.waitKey(0)
+    new_masked = plantcv.apply_mask(img=image, mask=image_mask, mask_color='white')
+    return new_masked, image_mask
 
 
 def instance_segmentation(image, mask):
@@ -183,7 +186,7 @@ def run_segmentation(loaded_images_dict, output_dir, should_combine_images=False
                 # if image_name != 'Beta-vulgaris_CotyledonPhase_Substrat1_27082019 (5).JPG':
                 #     continue
                 source, result, mask = segment(image)
-                postprocess_mask(source, result, mask)
+                result, mask = postprocess_mask(source, result, mask)
                 instance_segmentation(result, mask)
                 _logger.info(f'Writing result to: {output_path}')
                 if should_combine_images:
