@@ -12,7 +12,16 @@ from kws_logging import config_logger
 DEBUG = False
 VISUALIZE = False
 _logger = logging.getLogger('kws')
-# plantcv.params.debug = 'print'
+
+
+def setup_plantcv(should_debug=False):
+    if should_debug:
+        plantcv.params.debug = 'print'
+        plantcv.params.debug_outdir = os.path.join(os.path.dirname(__file__), 'debug')
+        _logger.info(f'Plantcv debugging is turned on. All results will be saved to: {plantcv.params.debug_outdir}')
+        if os.path.exists(plantcv.params.debug_outdir):
+            os.rmdir(plantcv.params.debug_outdir)
+        os.makedirs(plantcv.params.debug_outdir)
 
 
 def get_images_paths(input_dir: str, plants_names: list, growth_stages: list):
@@ -197,8 +206,8 @@ def run_segmentation(loaded_images_dict, output_dir, should_combine_images=False
 def run():
     parser = cli.create_parser()
     args = parser.parse_args()
-
     config_logger(args.output_dir, 'kws')
+    setup_plantcv(args.should_debug)
 
     _logger.info('Getting image paths from: {input_dir} '
                  '(plant names: {plant_names}, '

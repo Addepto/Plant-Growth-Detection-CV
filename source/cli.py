@@ -14,4 +14,5 @@ def create_parser():
                         help='Which growth stages should be analyzed (names of the directories)')
     parser.add_argument_group('Output definition', 'Info needed for the output')
     parser.add_argument('--output_dir', type=str, help='Path to the output directory.', required=True)
+    parser.add_argument('--should_debug', action='store_true', default=False)
     return parser
