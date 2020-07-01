@@ -15,6 +15,7 @@ _logger = logging.getLogger('kws')
 
 
 def setup_plantcv(should_debug=False):
+    plantcv.params.line_thickness = 3
     if should_debug:
         plantcv.params.debug = 'print'
         plantcv.params.debug_outdir = os.path.join(os.path.dirname(__file__), 'debug')
@@ -57,45 +58,66 @@ def load_images(images_dict: dict):
 
 
 def segment(image):
-    scale = 0.25
-    resized = cv2.resize(image, dsize=None, fx=scale, fy=scale)
-    if VISUALIZE:
-        cv2.imshow('a', resized)
-        cv2.waitKey(0)
+    masked_v = plantcv.rgb2gray_hsv(rgb_img=image, channel='v')
+    average_v = np.average(masked_v)
 
-    masked_a = plantcv.rgb2gray_lab(rgb_img=resized, channel='a')
+    masked_a = plantcv.rgb2gray_lab(rgb_img=image, channel='a')
     if VISUALIZE:
         cv2.imshow('a', masked_a)
         cv2.waitKey(0)
 
-    masked_b = plantcv.rgb2gray_lab(rgb_img=resized, channel='b')
+    masked_b = plantcv.rgb2gray_lab(rgb_img=image, channel='b')
     if VISUALIZE:
         cv2.imshow('b', masked_b)
         cv2.waitKey(0)
 
-    e = plantcv.rgb2gray_hsv(rgb_img=resized, channel='h')
+    masked_h = plantcv.rgb2gray_hsv(rgb_img=image, channel='h')
     if VISUALIZE:
-        cv2.imshow('e', e)
+        cv2.imshow('h', masked_h)
         cv2.waitKey(0)
 
-    maskedh_thresh = plantcv.threshold.binary(gray_img=masked_a, threshold=120,
+    maskedh_thresh1 = plantcv.threshold.binary(gray_img=masked_h, threshold=25,
+                                              max_value=255, object_type='light')
+    if VISUALIZE:
+        cv2.imshow('x', maskedh_thresh1)
+        cv2.waitKey(0)
+    maskedh_thresh2 = plantcv.threshold.binary(gray_img=masked_a, threshold=120,
                                               max_value=255, object_type='dark')
+    if VISUALIZE:
+        cv2.imshow('x', maskedh_thresh2)
+        cv2.waitKey(0)
+
+    maskedh_thresh = plantcv.logical_or(bin_img1=maskedh_thresh1, bin_img2=maskedh_thresh2)
     if VISUALIZE:
         cv2.imshow('x', maskedh_thresh)
         cv2.waitKey(0)
 
-    e = plantcv.rgb2gray_hsv(rgb_img=resized, channel='s')
+    masked_s = plantcv.rgb2gray_hsv(rgb_img=image, channel='s')
     if VISUALIZE:
-        cv2.imshow('e', e)
+        cv2.imshow('s', masked_s)
         cv2.waitKey(0)
 
-    maskeds_thresh = plantcv.threshold.binary(gray_img=masked_a, threshold=150,
+    threshold_s = 250 if average_v > 90 else 50
+    maskeds_thresh1 = plantcv.threshold.binary(gray_img=masked_s, threshold=threshold_s,
                                               max_value=255, object_type='light')
+    if VISUALIZE:
+        cv2.imshow('x', maskeds_thresh1)
+        cv2.waitKey(0)
+
+    maskeds_thresh2 = plantcv.threshold.binary(gray_img=masked_a, threshold=150,
+                                              max_value=255, object_type='light')
+    if VISUALIZE:
+        cv2.imshow('x', maskeds_thresh2)
+        cv2.waitKey(0)
+
+    maskeds_thresh = plantcv.logical_or(bin_img1=maskeds_thresh1, bin_img2=maskeds_thresh2)
     if VISUALIZE:
         cv2.imshow('x', maskeds_thresh)
         cv2.waitKey(0)
 
     hs = plantcv.logical_or(bin_img1=maskedh_thresh, bin_img2=maskeds_thresh)
+
+    hs_fill = plantcv.fill(bin_img=hs, size=500)
     if VISUALIZE:
         cv2.imshow('x', hs)
         cv2.waitKey(0)
@@ -130,16 +152,19 @@ def segment(image):
         cv2.imshow('ab', ab_fill)
         cv2.waitKey(0)
 
-    mask = plantcv.logical_and(ab_fill, hs)
+    mask = hs_fill
+    threshold = 0.3
+    image_size = mask.shape[0] * mask.shape[1]
+    mask = mask if np.sum(mask) / 255 <= image_size * threshold else plantcv.logical_and(ab_fill, hs_fill)
     if VISUALIZE:
         cv2.imshow('mask', mask)
         cv2.waitKey(0)
 
-    masked = plantcv.apply_mask(img=resized, mask=mask, mask_color='white')
+    masked = plantcv.apply_mask(img=image, mask=mask, mask_color='white')
     if VISUALIZE:
         cv2.imshow('res', masked)
         cv2.waitKey(0)
-    return resized, masked, mask
+    return masked, mask
 
 
 def postprocess_mask(image, masked, mask):
@@ -171,6 +196,20 @@ def instance_segmentation(image, mask):
     return watershed
 
 
+def analyze_plant(mask):
+    new_mask = plantcv.dilate(mask, ksize=9, i=1)
+    skeleton = plantcv.morphology.skeletonize(new_mask)
+    pruned, seg_img, edge_objects = plantcv.morphology.prune(skel_img=skeleton, size=100, mask=new_mask)
+    leaf_obj, stem_obj = plantcv.morphology.segment_sort(skel_img=skeleton,
+                                                         objects=edge_objects,
+                                                         mask=new_mask)
+    segmented_img, labeled_img = plantcv.morphology.segment_id(skel_img=skeleton,
+                                                               objects=leaf_obj,
+                                                               mask=new_mask)
+    cv2.imshow('Seg', labeled_img)
+    cv2.waitKey(0)
+
+
 def create_output_directories(loaded_images_dict, output_dir):
     for plant_name in loaded_images_dict.keys():
         for growth_stage in loaded_images_dict[plant_name].keys():
@@ -194,12 +233,18 @@ def run_segmentation(loaded_images_dict, output_dir, should_combine_images=False
                 #     continue
                 # if image_name != 'Beta-vulgaris_CotyledonPhase_Substrat1_27082019 (5).JPG':
                 #     continue
-                source, result, mask = segment(image)
-                result, mask = postprocess_mask(source, result, mask)
-                instance_segmentation(result, mask)
+                # if image_name != 'Beta-vulgaris_CotyledonPhase_Substrat3_27082019 (23).JPG':
+                #     continue
+                scale = 0.25
+                resized = cv2.resize(image, dsize=None, fx=scale, fy=scale)
+                _logger.info('Redoing segmentation - too many not needed values')
+                result, mask = segment(resized)
+                result, mask = postprocess_mask(resized, result, mask)
+                # instance_segmentation(result, mask)
+                # analyze_plant(mask)
                 _logger.info(f'Writing result to: {output_path}')
                 if should_combine_images:
-                    result = combine_images(source, result)
+                    result = combine_images(resized, result)
                 cv2.imwrite(output_path, result)
 
 
