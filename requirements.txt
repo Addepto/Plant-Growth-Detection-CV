@@ -2,3 +2,4 @@ opencv-contrib-python>=4.2.0
 numpy>=1.19.0
 plantcv>=3.8.0
 tqdm>=4.46.1
+mahotas>=1.4.10
