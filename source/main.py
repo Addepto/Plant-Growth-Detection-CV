@@ -252,7 +252,7 @@ def run():
     parser = cli.create_parser()
     args = parser.parse_args()
     config_logger(args.output_dir, 'kws')
-    setup_plantcv(args.should_debug)
+    setup_plantcv(args.debug)
 
     _logger.info('Getting image paths from: {input_dir} '
                  '(plant names: {plant_names}, '
@@ -265,7 +265,7 @@ def run():
     _logger.info('Creating image directories in: {output_dir}'.format(output_dir=args.output_dir))
     create_output_directories(loaded_images_dict, args.output_dir)
     _logger.info('Running segmentation...')
-    run_segmentation(loaded_images_dict, args.output_dir, should_combine_images=True)
+    run_segmentation(loaded_images_dict, args.output_dir, should_combine_images=args.combine_output_images)
 
     # sample_image = loaded_images_dict['Beta vulgaris']['Cotyledon'][0]
     # segment(sample_image)
