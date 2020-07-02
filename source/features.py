@@ -1,5 +1,5 @@
-
 import cv2
+import numpy as np
 from mahotas import features
 
 
@@ -21,3 +21,15 @@ def haralick(image):
     """
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     return features.haralick(image).mean(axis=0)
+
+
+def calculate_descriptor(image):
+    """
+    Calculate descriptor for the image
+    :param image: image to be processed
+    :return: feature descriptor
+    """
+    moments = hu_moments(image)
+    texture = haralick(image)
+
+    return np.hstack([moments, texture])
