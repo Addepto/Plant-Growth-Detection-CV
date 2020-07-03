@@ -7,6 +7,7 @@ from plantcv import plantcv
 from tqdm import tqdm
 
 import cli
+from classification import run_classification
 from kws_logging import config_logger
 
 DEBUG = False
@@ -262,10 +263,15 @@ def run():
     images_dict = get_images_paths(args.input_dir, args.plants_names, args.growth_stages)
     _logger.info('Loading images...')
     loaded_images_dict = load_images(images_dict)
-    _logger.info('Creating image directories in: {output_dir}'.format(output_dir=args.output_dir))
-    create_output_directories(loaded_images_dict, args.output_dir)
-    _logger.info('Running segmentation...')
-    run_segmentation(loaded_images_dict, args.output_dir, should_combine_images=args.combine_output_images)
+    # _logger.info('Creating image directories in: {output_dir}'.format(output_dir=args.output_dir))
+    # create_output_directories(loaded_images_dict, args.output_dir)
+    # _logger.info('Running segmentation...')
+    # run_segmentation(loaded_images_dict, args.output_dir, should_combine_images=args.combine_output_images)
+
+    _logger.info('Loading segmented images...')
+    loaded_segmented_dict = load_images(get_images_paths(args.output_dir, args.plants_names, args.growth_stages))
+    run_classification(loaded_images_dict)
+
 
     # sample_image = loaded_images_dict['Beta vulgaris']['Cotyledon'][0]
     # segment(sample_image)

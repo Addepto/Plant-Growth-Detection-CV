@@ -33,3 +33,15 @@ def calculate_descriptor(image):
     texture = haralick(image)
 
     return np.hstack([moments, texture])
+
+
+def calculate_descriptors(image_list):
+    """
+    Calculate descriptor for every image in image_list
+    :param image_list:
+    :return:
+    """
+    result = []
+    for image in image_list:
+        result.append(calculate_descriptor(image))
+    return result
