@@ -1,6 +1,8 @@
 import logging
 
+import numpy as np
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import precision_score
 from sklearn.model_selection import train_test_split, KFold, cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
@@ -49,7 +51,8 @@ def prepare_data(loaded_segmented_dict):
         for growth_stage, image_path_list in growth_stages.items():
             for _, image in tqdm(image_path_list):
                 data.append(image)
-                labels.append(f'{plant_name}.{growth_stage}')
+                # labels.append(f'{plant_name}.{growth_stage}')
+                labels.append(f'{plant_name}')
     return data, labels
 
 
@@ -72,3 +75,15 @@ def run_classification(loaded_segmented_dict):
         results.append(cross_validation)
         names.append(classifier_name)
         _logger.info("%s: %f (%f)" % (classifier_name, cross_validation.mean(), cross_validation.std()))
+
+    means = [cross_validation.mean() for cross_validation in results]
+    best = means.index(max(means))
+    classifier_name = names[best]
+    
+    classifier = models[classifier_name]
+    classifier.fit(train_data, train_label)
+    prediction = classifier.predict(test_data)
+    precision = precision_score(test_label, prediction, labels=np.unique(labels), average='micro')
+    _logger.info(f'Precision of {classifier_name} is {precision}')
+    precision = precision_score(test_label, prediction, labels=np.unique(labels), average='macro')
+    _logger.info(f'Precision of {classifier_name} is {precision}')
