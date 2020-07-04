@@ -255,22 +255,25 @@ def run():
     config_logger(args.output_dir, 'kws')
     setup_plantcv(args.debug)
 
-    _logger.info('Getting image paths from: {input_dir} '
-                 '(plant names: {plant_names}, '
-                 'growth stages: {growth_stages}).'.format(input_dir=args.input_dir,
-                                                           plant_names=args.plants_names,
-                                                           growth_stages=args.growth_stages))
-    images_dict = get_images_paths(args.input_dir, args.plants_names, args.growth_stages)
-    _logger.info('Loading images...')
-    loaded_images_dict = load_images(images_dict)
-    # _logger.info('Creating image directories in: {output_dir}'.format(output_dir=args.output_dir))
-    # create_output_directories(loaded_images_dict, args.output_dir)
-    # _logger.info('Running segmentation...')
-    # run_segmentation(loaded_images_dict, args.output_dir, should_combine_images=args.combine_output_images)
+    _logger.info('Redo segmentation set to: {redo_segmentation}'.format(redo_segmentation=args.redo_segmentation))
+
+    if args.redo_segmentation:
+        _logger.info('Getting image paths from: {input_dir} '
+                     '(plant names: {plant_names}, '
+                     'growth stages: {growth_stages}).'.format(input_dir=args.input_dir,
+                                                               plant_names=args.plants_names,
+                                                               growth_stages=args.growth_stages))
+        images_dict = get_images_paths(args.input_dir, args.plants_names, args.growth_stages)
+        _logger.info('Loading images...')
+        loaded_images_dict = load_images(images_dict)
+        _logger.info('Creating image directories in: {output_dir}'.format(output_dir=args.output_dir))
+        create_output_directories(loaded_images_dict, args.output_dir)
+        _logger.info('Running segmentation...')
+        run_segmentation(loaded_images_dict, args.output_dir, should_combine_images=args.combine_output_images)
 
     _logger.info('Loading segmented images...')
     loaded_segmented_dict = load_images(get_images_paths(args.output_dir, args.plants_names, args.growth_stages))
-    run_classification(loaded_images_dict)
+    run_classification(loaded_segmented_dict)
 
 
     # sample_image = loaded_images_dict['Beta vulgaris']['Cotyledon'][0]

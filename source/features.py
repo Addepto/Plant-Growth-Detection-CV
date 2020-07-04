@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from mahotas import features
+from sklearn.preprocessing import MinMaxScaler
 
 
 def hu_moments(image):
@@ -23,25 +24,44 @@ def haralick(image):
     return features.haralick(image).mean(axis=0)
 
 
-def calculate_descriptor(image):
+def zernike_moments(image, radius=450):
+    """
+    Calculate zernike descriptor
+    :param image: image to be used
+    :param radius: the radius of polynomial
+    :return:
+    """
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    return features.zernike_moments(image, radius)
+
+
+def calculate_descriptor(image, descriptor_component_functions):
     """
     Calculate descriptor for the image
     :param image: image to be processed
+    :param descriptor_component_functions: list of functions to use to calculate the final descriptor
     :return: feature descriptor
     """
-    moments = hu_moments(image)
-    texture = haralick(image)
 
-    return np.hstack([moments, texture])
+    descriptor = []
+    for descriptor_component_function in descriptor_component_functions:
+        descriptor.append(descriptor_component_function(image))
+
+    return np.hstack(descriptor)
 
 
-def calculate_descriptors(image_list):
+def calculate_descriptors(image_list, descriptor_component_functions):
     """
     Calculate descriptor for every image in image_list
-    :param image_list:
-    :return:
+    :param image_list: images to be processed
+    :param descriptor_component_functions: list of functions to use to calculate the final descriptor
+    :return: processed images = list of descriptors
     """
     result = []
     for image in image_list:
-        result.append(calculate_descriptor(image))
-    return result
+        result.append(calculate_descriptor(image, descriptor_component_functions))
+
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    rescaled_features = scaler.fit_transform(result)
+
+    return rescaled_features

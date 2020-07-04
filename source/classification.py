@@ -1,13 +1,12 @@
 import logging
 
-import cv2
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, KFold, cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 from tqdm import tqdm
 
-from features import calculate_descriptors
+from features import calculate_descriptors, hu_moments, zernike_moments, haralick
 
 _logger = logging.getLogger('kws')
 
@@ -34,6 +33,15 @@ def train():
     pass
 
 
+def get_descriptor_parts_functions():
+    function_list = [
+        hu_moments,
+        haralick,
+        zernike_moments
+    ]
+    return function_list
+
+
 def prepare_data(loaded_segmented_dict):
     data = []
     labels = []
@@ -49,7 +57,7 @@ def run_classification(loaded_segmented_dict):
     _logger.info('Preparing data for training and testing')
     data, labels = prepare_data(loaded_segmented_dict)
     _logger.info('Prepare feature descriptors')
-    descriptors = calculate_descriptors(data)
+    descriptors = calculate_descriptors(data, get_descriptor_parts_functions())
     _logger.info('Splitting data')
     train_data, test_data, train_label, test_label = \
         train_test_split(descriptors, labels, test_size=parameters['test_size'], random_state=parameters['seed'],
