@@ -8,6 +8,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 from tqdm import tqdm
 
+from data_transform import random_rotation, random_noise, horizontal_flip, transform_data
 from features import calculate_descriptors, hu_moments, zernike_moments, haralick
 
 _logger = logging.getLogger('kws')
@@ -27,19 +28,20 @@ models = {
 }
 
 
-def classify():
-    pass
-
-
-def train():
-    pass
-
-
 def get_descriptor_parts_functions():
     function_list = [
         hu_moments,
         haralick,
         zernike_moments
+    ]
+    return function_list
+
+
+def get_data_transform_functions():
+    function_list = [
+        random_rotation,
+        random_noise,
+        horizontal_flip
     ]
     return function_list
 
@@ -51,15 +53,17 @@ def prepare_data(loaded_segmented_dict):
         for growth_stage, image_path_list in growth_stages.items():
             for _, image in tqdm(image_path_list):
                 data.append(image)
-                # labels.append(f'{plant_name}.{growth_stage}')
-                labels.append(f'{plant_name}')
+                labels.append(f'{plant_name}.{growth_stage}')
+                # labels.append(f'{plant_name}')
     return data, labels
 
 
 def run_classification(loaded_segmented_dict):
     _logger.info('Preparing data for training and testing')
     data, labels = prepare_data(loaded_segmented_dict)
-    _logger.info('Prepare feature descriptors')
+    _logger.info('Applying transforms to data')
+    data, labels = transform_data(data, labels, get_data_transform_functions())
+    _logger.info('Preparing feature descriptors')
     descriptors = calculate_descriptors(data, get_descriptor_parts_functions())
     _logger.info('Splitting data')
     train_data, test_data, train_label, test_label = \
@@ -79,7 +83,7 @@ def run_classification(loaded_segmented_dict):
     means = [cross_validation.mean() for cross_validation in results]
     best = means.index(max(means))
     classifier_name = names[best]
-    
+
     classifier = models[classifier_name]
     classifier.fit(train_data, train_label)
     prediction = classifier.predict(test_data)

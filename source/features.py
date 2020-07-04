@@ -24,7 +24,7 @@ def haralick(image):
     return features.haralick(image).mean(axis=0)
 
 
-def zernike_moments(image, radius=450):
+def zernike_moments(image, radius=50):
     """
     Calculate zernike descriptor
     :param image: image to be used
