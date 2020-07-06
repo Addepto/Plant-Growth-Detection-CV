@@ -29,10 +29,22 @@ def zernike_moments(image, radius=50):
     Calculate zernike descriptor
     :param image: image to be used
     :param radius: the radius of polynomial
-    :return:
+    :return: zernike moments
     """
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     return features.zernike_moments(image, radius)
+
+
+def local_binary_patterns(image, radius=40, points=7):
+    """
+    Calculate local binary patterns
+    :param image: image to be used
+    :param radius: radius for lbp
+    :param points: number of points for lbp
+    :return: local binary patterns
+    """
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    return features.lbp(image, radius=radius, points=points)
 
 
 def calculate_descriptor(image, descriptor_component_functions):

@@ -274,6 +274,7 @@ def run():
     _logger.info('Loading segmented images...')
     loaded_segmented_dict = load_images(get_images_paths(args.output_dir, args.plants_names, args.growth_stages))
     run_classification(loaded_segmented_dict)
+    run_classification(loaded_segmented_dict, use_growth=True)
 
 
     # sample_image = loaded_images_dict['Beta vulgaris']['Cotyledon'][0]

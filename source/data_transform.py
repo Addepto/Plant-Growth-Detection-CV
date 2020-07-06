@@ -32,7 +32,7 @@ def horizontal_flip(image):
     return image[:, ::-1, :]
 
 
-def transform_data(image_list, label_list, data_transform_functions, trials=3):
+def transform_data(image_list, label_list, data_transform_functions, trials=2):
     """
     Transform input images using given transform functions
     :param image_list: list of images
