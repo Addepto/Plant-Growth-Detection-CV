@@ -1,5 +1,4 @@
 import logging
-import random
 
 import numpy as np
 import pandas
@@ -16,6 +15,7 @@ from features import calculate_descriptors, hu_moments, zernike_moments, haralic
 
 _logger = logging.getLogger('kws')
 
+# parameters for the classifiers
 parameters = {
     'seed': 5,
     # 'seed': random.randint(0, 10000),
@@ -27,6 +27,7 @@ parameters = {
     'error_score': 'raise'
 }
 
+# tested models
 models = {
     'KNN': KNeighborsClassifier(),
     'Decistion Tree': DecisionTreeClassifier(random_state=parameters['seed']),
@@ -37,6 +38,10 @@ models = {
 
 
 def get_descriptor_parts_functions():
+    """
+    Define which functions should be used to create image descriptor
+    :return: list with functions
+    """
     function_list = [
         hu_moments,
         haralick,
@@ -47,6 +52,10 @@ def get_descriptor_parts_functions():
 
 
 def get_data_transform_functions():
+    """
+    Define which functions should be used to transform data
+    :return: list with functions
+    """
     function_list = [
         random_rotation,
         random_noise,
@@ -56,6 +65,13 @@ def get_data_transform_functions():
 
 
 def prepare_data(loaded_segmented_dict, use_growth=False, searched_plant='Beta vulgaris'):
+    """
+    Prepare data - so divide into classes
+    :param loaded_segmented_dict: images to consider
+    :param use_growth: should be use use growth in label
+    :param searched_plant: main plant to be recognized
+    :return: data list nad label list
+    """
     data = []
     labels = []
     for plant_name, growth_stages in loaded_segmented_dict.items():
@@ -76,6 +92,12 @@ def prepare_data(loaded_segmented_dict, use_growth=False, searched_plant='Beta v
 
 
 def test_LGBM(predicted_labels, test_labels):
+    """
+    Testing function for LGBM Classifier
+    :param predicted_labels: labels returned by the classifier
+    :param test_labels: ground truth labels
+    :return: score of the classifier
+    """
     counter = 0
     for i in range(len(test_labels)):
         if int(test_labels[i]) == predicted_labels[i].argmax():
@@ -85,6 +107,11 @@ def test_LGBM(predicted_labels, test_labels):
 
 
 def run_classification(loaded_segmented_dict, use_growth=False):
+    """
+    Test classifiers
+    :param loaded_segmented_dict: masked images
+    :param use_growth: should the growth be used as a label
+    """
     _logger.info('Seed: {seed}'.format(seed=parameters['seed']))
     _logger.info('Preparing data for training and testing')
     data, labels = prepare_data(loaded_segmented_dict, use_growth=use_growth)
@@ -120,6 +147,15 @@ def run_classification(loaded_segmented_dict, use_growth=False):
 
 
 def eval_classifier(classifier_name, labels, test_data, test_label, train_data, train_label):
+    """
+    Eval the classifier
+    :param classifier_name: classifier name
+    :param labels: ground-truth labels
+    :param test_data: test data after split
+    :param test_label: test labels after split
+    :param train_data: training data after split
+    :param train_label: training labels after split
+    """
     classifier = models[classifier_name]
     classifier.fit(train_data, train_label)
 
