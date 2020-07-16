@@ -1,3 +1,5 @@
+import logging
+
 import pandas
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
@@ -6,13 +8,31 @@ from classification import parameters
 from data import load_images, get_images_paths, prepare_data_for_classification
 import cv2
 
+from data_transform import random_noise, random_rotation, transform_data
+
+_logger = logging.getLogger('kws')
+
+
+def get_data_transform_functions():
+    """
+    Define which functions should be used to transform data
+    :return: list with functions
+    """
+    function_list = [
+        random_rotation,
+        random_noise,
+    ]
+    return function_list
+
 
 class PlantDataset(Dataset):
     def __init__(self, output_dir, plants_names, growth_stages, train=True, use_growth=False):
         images_dict = load_images(get_images_paths(output_dir, plants_names, growth_stages))
 
         self.train = train
-        self.data, self.labels = prepare_data_for_classification(images_dict, use_growth=False)
+        self.data, self.labels = prepare_data_for_classification(images_dict, use_growth=use_growth)
+        _logger.info('Applying transforms to data')
+        self.data, self.labels = transform_data(self.data, self.labels, get_data_transform_functions())
 
         shape = (864, 576, 3)
 

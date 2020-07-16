@@ -22,7 +22,7 @@ class Net(nn.Module):
         self.conv2 = nn.Conv2d(6, 16, 5)
         self.fc1 = nn.Linear(16 * 141 * 213, 120)
         self.fc2 = nn.Linear(120, 84)
-        self.output_classes = 2 if growth else 9
+        self.output_classes = 9 if growth else 2
         self.fc3 = nn.Linear(84, self.output_classes)
 
     def forward(self, x):
