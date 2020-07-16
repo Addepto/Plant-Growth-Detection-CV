@@ -8,8 +8,8 @@ from sklearn.metrics import precision_score
 from sklearn.model_selection import train_test_split, KFold, cross_val_score
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
-from tqdm import tqdm
 
+from data import prepare_data_for_classification
 from data_transform import random_rotation, random_noise, horizontal_flip, transform_data
 from features import calculate_descriptors, hu_moments, zernike_moments, haralick, local_binary_patterns
 
@@ -64,33 +64,6 @@ def get_data_transform_functions():
     return function_list
 
 
-def prepare_data(loaded_segmented_dict, use_growth=False, searched_plant='Beta vulgaris'):
-    """
-    Prepare data - so divide into classes
-    :param loaded_segmented_dict: images to consider
-    :param use_growth: should be use use growth in label
-    :param searched_plant: main plant to be recognized
-    :return: data list nad label list
-    """
-    data = []
-    labels = []
-    for plant_name, growth_stages in loaded_segmented_dict.items():
-        for growth_stage, image_path_list in growth_stages.items():
-            for _, image in tqdm(image_path_list):
-                if not use_growth:
-                    data.append(image)
-                # labels.append(f'{plant_name}.{growth_stage}')
-                if plant_name == searched_plant:
-                    if use_growth:
-                        data.append(image)
-                        labels.append(f'{plant_name}.{growth_stage}')
-                    else:
-                        labels.append(f'{plant_name}')
-                elif not use_growth:
-                    labels.append('other')
-    return data, labels
-
-
 def test_LGBM(predicted_labels, test_labels):
     """
     Testing function for LGBM Classifier
@@ -114,7 +87,7 @@ def run_classification(loaded_segmented_dict, use_growth=False):
     """
     _logger.info('Seed: {seed}'.format(seed=parameters['seed']))
     _logger.info('Preparing data for training and testing')
-    data, labels = prepare_data(loaded_segmented_dict, use_growth=use_growth)
+    data, labels = prepare_data_for_classification(loaded_segmented_dict, use_growth=use_growth)
     _logger.info('Applying transforms to data')
     data, labels = transform_data(data, labels, get_data_transform_functions())
     _logger.info('Preparing feature descriptors')

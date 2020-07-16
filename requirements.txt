@@ -4,3 +4,4 @@ plantcv>=3.8.0
 tqdm>=4.46.1
 mahotas>=1.4.10
 sklearn
+torch>=1.5.1
