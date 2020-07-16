@@ -15,14 +15,15 @@ _logger = logging.getLogger('kws')
 
 
 class Net(nn.Module):
-    def __init__(self):
+    def __init__(self, growth=False):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(3, 6, 5)
         self.pool = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(6, 16, 5)
         self.fc1 = nn.Linear(16 * 141 * 213, 120)
         self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 2)
+        self.output_classes = 2 if growth else 9
+        self.fc3 = nn.Linear(84, self.output_classes)
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
@@ -82,16 +83,20 @@ def run():
     args = parser.parse_args()
     config_logger(args.output_dir, 'kws')
 
+    use_growth = False
+
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     output_file_name = 'net.pth'
 
     _logger.info('Creating net')
-    network = Net()
+    network = Net(use_growth)
     network.to(device)
 
     _logger.info('Creating dataset')
-    train_plant_dataset = dataset.PlantDataset(args.output_dir, args.plants_names, args.growth_stages)
-    test_plant_dataset = dataset.PlantDataset(args.output_dir, args.plants_names, args.growth_stages, train=False)
+    train_plant_dataset = dataset.PlantDataset(args.output_dir, args.plants_names, args.growth_stages,
+                                               use_growth=use_growth)
+    test_plant_dataset = dataset.PlantDataset(args.output_dir, args.plants_names, args.growth_stages,
+                                              train=False, use_growth=use_growth)
     _logger.info('Creating data loader')
     train_loader = DataLoader(train_plant_dataset, batch_size=4, shuffle=True, num_workers=2)
     test_loader = DataLoader(test_plant_dataset, batch_size=4, shuffle=True, num_workers=2)

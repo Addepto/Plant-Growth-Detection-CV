@@ -8,7 +8,7 @@ import cv2
 
 
 class PlantDataset(Dataset):
-    def __init__(self, output_dir, plants_names, growth_stages, train=True):
+    def __init__(self, output_dir, plants_names, growth_stages, train=True, use_growth=False):
         images_dict = load_images(get_images_paths(output_dir, plants_names, growth_stages))
 
         self.train = train
