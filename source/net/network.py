@@ -1,6 +1,8 @@
 import logging
 import os
 
+# it seems that there is a bug in pytorch/sklearn, and sklearn modules needs to be imported before torch
+from net import dataset
 import torch
 import torch.nn.functional as F
 from torch import nn, optim
@@ -8,7 +10,6 @@ from torch.utils.data.dataloader import DataLoader
 
 import cli
 from kws_logging import config_logger
-from net import dataset
 
 _logger = logging.getLogger('kws')
 
@@ -19,14 +20,14 @@ class Net(nn.Module):
         self.conv1 = nn.Conv2d(3, 6, 5)
         self.pool = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
+        self.fc1 = nn.Linear(16 * 141 * 213, 120)
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, 9)
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 16 * 5 * 5)
+        x = x.contiguous().view(-1, 16 * 141 * 213)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
@@ -39,11 +40,12 @@ def train(network, train_data_loader, device):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(network.parameters(), lr=0.001)
 
-    for epoch in range(5):
+    for epoch in range(10):
         running_loss = 0.0
 
         for i, data in enumerate(train_data_loader, 0):
-            image, label = data[0].to(device), data[1].to(device)
+            image, label = data[0].float().to(device), data[1].to(device)
+            image = image.permute(0, 3, 1, 2)
 
             optimizer.zero_grad()
 
@@ -53,8 +55,8 @@ def train(network, train_data_loader, device):
             optimizer.step()
 
             running_loss += loss.item()
-            if i % 30 == 29:  # print every 2000 mini-batches
-                _logger.info('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 2000))
+            if i % 5 == 4:  # print every 5 mini-batches
+                _logger.info('[%d, %5d] loss: %.7f' % (epoch + 1, i + 1, running_loss / 5))
                 running_loss = 0.0
     _logger.info('Finished training')
 
