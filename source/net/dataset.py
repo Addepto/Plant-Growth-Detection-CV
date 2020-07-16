@@ -12,7 +12,7 @@ class PlantDataset(Dataset):
         images_dict = load_images(get_images_paths(output_dir, plants_names, growth_stages))
 
         self.train = train
-        self.data, self.labels = prepare_data_for_classification(images_dict, use_growth=True)
+        self.data, self.labels = prepare_data_for_classification(images_dict, use_growth=False)
 
         shape = (864, 576, 3)
 

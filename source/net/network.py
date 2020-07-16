@@ -22,7 +22,7 @@ class Net(nn.Module):
         self.conv2 = nn.Conv2d(6, 16, 5)
         self.fc1 = nn.Linear(16 * 141 * 213, 120)
         self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 9)
+        self.fc3 = nn.Linear(84, 2)
 
     def forward(self, x):
         x = self.pool(F.relu(self.conv1(x)))
@@ -61,25 +61,51 @@ def train(network, train_data_loader, device):
     _logger.info('Finished training')
 
 
+def test(network, test_data_loader, device):
+    total = 0
+    correct = 0
+    with torch.no_grad():
+        for data in test_data_loader:
+            image, label = data[0].float().to(device), data[1].to(device)
+            image = image.permute(0, 3, 1, 2)
+
+            outputs = network(image)
+            _, predicted = torch.max(outputs.data, 1)
+            total += label.size(0)
+            correct += (predicted == label).sum().item()
+    accuracy = correct / total * 100.0
+    _logger.info(f'Accuracy on {total} images is : {accuracy}')
+
+
 def run():
     parser = cli.create_parser()
     args = parser.parse_args()
     config_logger(args.output_dir, 'kws')
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    output_file_name = 'net.pth'
 
     _logger.info('Creating net')
     network = Net()
     network.to(device)
 
     _logger.info('Creating dataset')
-    train_dataset = dataset.PlantDataset(args.output_dir, args.plants_names, args.growth_stages)
+    train_plant_dataset = dataset.PlantDataset(args.output_dir, args.plants_names, args.growth_stages)
+    test_plant_dataset = dataset.PlantDataset(args.output_dir, args.plants_names, args.growth_stages, train=False)
     _logger.info('Creating data loader')
-    train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=2)
+    train_loader = DataLoader(train_plant_dataset, batch_size=4, shuffle=True, num_workers=2)
+    test_loader = DataLoader(test_plant_dataset, batch_size=4, shuffle=True, num_workers=2)
 
-    train(network, train_loader, device)
-    path = os.path.join(args.output_dir, 'net.pth')
-    _logger.info(f'Saving model to: {path}')
+    path = os.path.join(args.output_dir, output_file_name) if not args.network_model_path else args.network_model_path
+    if args.network_model_path:
+        _logger.info('Loading network from file {path}'.format(path=args.network_model_path))
+        network.load_state_dict(torch.load(path))
+    else:
+        train(network, train_loader, device)
+        _logger.info(f'Saving model to: {path}')
+        torch.save(network.state_dict(), path)
+
+    test(network, test_loader, device)
 
 
 if __name__ == '__main__':
