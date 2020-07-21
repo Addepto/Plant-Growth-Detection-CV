@@ -8,7 +8,7 @@ from classification import parameters
 from data import load_images, get_images_paths, prepare_data_for_classification
 import cv2
 
-from data_transform import random_noise, random_rotation, transform_data
+from data_transform import random_noise, random_rotation, transform_data, horizontal_flip
 
 _logger = logging.getLogger('kws')
 
@@ -20,7 +20,8 @@ def get_data_transform_functions():
     """
     function_list = [
         random_rotation,
-        random_noise,
+        # random_noise,
+        horizontal_flip
     ]
     return function_list
 
@@ -32,13 +33,13 @@ class PlantDataset(Dataset):
         self.train = train
         self.data, self.labels = prepare_data_for_classification(images_dict, use_growth=use_growth)
         _logger.info('Applying transforms to data')
-        self.data, self.labels = transform_data(self.data, self.labels, get_data_transform_functions())
+        self.data, self.labels = transform_data(self.data, self.labels, get_data_transform_functions() if train else [])
 
         shape = (864, 576, 3)
 
         for i, image in enumerate(self.data):
             self.data[i] = cv2.resize(image, dsize=(shape[0], shape[1]))
-        self.labels = pandas.factorize(self.labels)[0]
+        self.labels, self.label_names = pandas.factorize(self.labels)
 
         self.train_data, self.test_data, self.train_label, self.test_label = \
             train_test_split(self.data, self.labels, test_size=parameters['test_size'], random_state=parameters['seed'],
@@ -51,5 +52,5 @@ class PlantDataset(Dataset):
         source_images, source_labels = (self.train_data, self.train_label) if self.train \
             else (self.test_data, self.test_label)
 
-        return source_images[idx], source_labels[idx]
+        return source_images[idx], source_labels[idx], self.label_names[source_labels[idx]]
 
