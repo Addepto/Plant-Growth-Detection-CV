@@ -75,6 +75,10 @@ def prepare_data_for_classification(loaded_segmented_dict, use_growth=False, sea
                         labels.append(f'{plant_name}.{growth_stage}')
                     else:
                         labels.append(f'{plant_name}')
-                elif not use_growth:
-                    labels.append('other')
+                else:
+                    if use_growth:
+                        data.append(image)
+                        labels.append(f'{plant_name}.{growth_stage}')
+                    else:
+                        labels.append('other')
     return data, labels
