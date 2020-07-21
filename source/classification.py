@@ -20,7 +20,7 @@ parameters = {
     'seed': 5,
     # 'seed': random.randint(0, 10000),
     'num_trees': 10,
-    'test_size': 0.1,
+    'test_size': 0.3,
     'kfold_splits': 10,
     'scoring': 'accuracy',
     'n_jobs': -1,
