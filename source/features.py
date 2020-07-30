@@ -32,6 +32,8 @@ def zernike_moments(image, radius=50):
     :return: zernike moments
     """
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    image = cv2.bitwise_not(image)
+    image[image > 0] = 255
     return features.zernike_moments(image, radius)
 
 

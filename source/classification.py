@@ -43,8 +43,8 @@ def get_descriptor_parts_functions():
     :return: list with functions
     """
     function_list = [
-        hu_moments,
-        haralick,
+        # hu_moments,
+        # haralick,
         zernike_moments,
         local_binary_patterns
     ]
@@ -58,7 +58,7 @@ def get_data_transform_functions():
     """
     function_list = [
         random_rotation,
-        random_noise,
+        # random_noise,
         horizontal_flip
     ]
     return function_list
@@ -88,15 +88,21 @@ def run_classification(loaded_segmented_dict, use_growth=False):
     _logger.info('Seed: {seed}'.format(seed=parameters['seed']))
     _logger.info('Preparing data for training and testing')
     data, labels = prepare_data_for_classification(loaded_segmented_dict, use_growth=use_growth)
-    _logger.info('Applying transforms to data')
-    data, labels = transform_data(data, labels, get_data_transform_functions())
-    _logger.info('Preparing feature descriptors')
-    labels = pandas.factorize(labels)[0]
-    descriptors = calculate_descriptors(data, get_descriptor_parts_functions())
     _logger.info('Splitting data')
     train_data, test_data, train_label, test_label = \
-        train_test_split(descriptors, labels, test_size=parameters['test_size'], random_state=parameters['seed'],
+        train_test_split(data, labels, test_size=parameters['test_size'], random_state=parameters['seed'],
                          shuffle=True)
+    numeric_labels, string_labels = pandas.factorize(labels)
+    label_mapping = {string_label: numeric_label
+                     for numeric_label, string_label in zip(np.unique(numeric_labels), string_labels)}
+    _logger.info('Applying transforms to data')
+    train_data, train_label = transform_data(train_data, train_label, get_data_transform_functions())
+    test_data, test_label = transform_data(test_data, test_label, get_data_transform_functions())
+    _logger.info('Preparing feature descriptors')
+    train_label = [label_mapping[x] for x in train_label]
+    test_label = [label_mapping[x] for x in test_label]
+    train_data = calculate_descriptors(train_data, get_descriptor_parts_functions())
+    test_data = calculate_descriptors(test_data, get_descriptor_parts_functions())
     _logger.info('Running classification')
     results = []
     names = []
@@ -138,7 +144,7 @@ def eval_classifier(classifier_name, labels, test_data, test_label, train_data, 
         _logger.info(f'Precision of {classifier_name} is {precision}')
     else:
         prediction = classifier.predict(test_data)
-        precision = precision_score(test_label, prediction, labels=np.unique(labels), average='micro')
+        precision = precision_score(test_label, prediction, labels=np.unique(test_label), average='micro')
         _logger.info(f'Precision of {classifier_name} is {precision}')
-        precision = precision_score(test_label, prediction, labels=np.unique(labels), average='macro')
+        precision = precision_score(test_label, prediction, labels=np.unique(test_label), average='macro')
         _logger.info(f'Precision of {classifier_name} is {precision}')
