@@ -7,7 +7,7 @@ from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 from detectron2.utils.logger import setup_logger
 import torch
 
-from utils import get_args, labeltype2nclass, get_categories, pred2tg
+from utils import get_args, labeltype2nclass, get_categories, pred2tg, mapper
 
 args = get_args()
 
@@ -21,8 +21,7 @@ if not TO_TRAIN:
     model_iter = os.path.split(args.model_path)[-1].split('_')[-1].split('.')[0]
 
 OUTPUT = OUTPUT if TO_TRAIN else '{}'.format(os.path.split(args.model_path)[0])
-OUTPUT_LOGS = '{}/{}_log.txt'.format(OUTPUT, model_iter)
-
+OUTPUT_LOGS = '{}/{}_{}_log.txt'.format(OUTPUT, 'train' if TO_TRAIN else 'eval', model_iter)
 
 logger = setup_logger(output=OUTPUT_LOGS)
 from detectron2 import model_zoo
@@ -113,7 +112,7 @@ def get_model_config(model_yml, is_train, model_path=None, debug=False, device='
             cfg.SOLVER.BASE_LR = args.lr
             cfg.SOLVER.WARMUP_ITERS = 5000
             cfg.SOLVER.MAX_ITER = 50000
-            cfg.SOLVER.STEPS = (20000, 45000)
+            cfg.SOLVER.STEPS = (15000, 22500)
             cfg.SOLVER.GAMMA = 0.1
             cfg.SOLVER.CHECKPOINT_PERIOD = 2500
             cfg.MODEL.ROI_HEADS.NUM_CLASSES = NUM_CLASSES
@@ -131,7 +130,8 @@ def get_model_config(model_yml, is_train, model_path=None, debug=False, device='
 def train():
     cfg = get_model_config(model_yml=MODEL_YML, is_train=True, model_path=MODEL_PATH, device=DEVICE, debug=DEBUG,
                            training_output=OUTPUT)
-    trainer = DefaultTrainer(cfg)
+
+    trainer = DefaultTrainer(cfg, mapper=mapper)
     trainer.resume_or_load(resume=RESUME)
 
     trainer.train()

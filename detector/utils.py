@@ -1,10 +1,15 @@
 import argparse
+import copy
 import json
 import math
 import os
 
 import cv2
 import numpy as np
+import torch
+
+from detectron2.data import detection_utils as utils
+import detectron2.data.transforms as T
 
 args = None
 
@@ -73,6 +78,23 @@ def resize(img_path):
 
             cv2.imwrite(path, img)
 
+
+def mapper(dataset_dict):
+    dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
+    # can use other ways to read image
+    image = utils.read_image(dataset_dict["file_name"], format="BGR")
+    # can use other augmentations
+    transform = T.Resize((800, 800)).get_transform(image)
+    image = torch.from_numpy(transform.apply_image(image).transpose(2, 0, 1))
+    annos = [
+        utils.transform_instance_annotations(annotation, [transform], image.shape[1:])
+        for annotation in dataset_dict.pop("annotations")
+    ]
+    return {
+       # create the format that the model expects
+       "image": image,
+       "instances": utils.annotations_to_instances(annos, image.shape[1:])
+    }
 
 def res_single(path, override=True, save_to=None):
     img = cv2.imread(path)
