@@ -14,7 +14,6 @@ import detectron2.data.transforms as T
 args = None
 
 
-
 def get_args():
     list_of_models = ['COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml',
                       "Misc/cascade_mask_rcnn_R_50_FPN_3x.yaml"]
@@ -29,12 +28,16 @@ def get_args():
 
     parser.add_argument('-o', '--output', type=str, default='./output', help='output dir')
     parser.add_argument('--model_path', type=str, default=None, help='output dir')
-    parser.add_argument('--model_type', type=str, choices=list_of_models,
+    parser.add_argument('--model_yml', type=str, choices=list_of_models,
                         default=list_of_models[0])
+
+    parser.add_argument('--root_images', type=str, choices=list_of_models,
+                        default='./dataset/current/all_out')
 
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--unfocused', action='store_true')
     parser.add_argument('--resume', action='store_true')
+    parser.add_argument('--eval_after_train', action='store_true')
     parser.add_argument('--override_tt', action='store_true', help='override train/test data_dicts')
     parser.add_argument('--sf', action='store_true', help='skip unfocused class')
 
@@ -43,10 +46,7 @@ def get_args():
     parser.add_argument('--label_type', type=int, choices=[1, 2, 3], required=True)
     parser.add_argument('--thrsh', type=float, default=0.8)
     parser.add_argument('--lr', type=float, default=1e-3)
-
-    # parser.add_argument('--sum', dest='accumulate', action='store_const',
-    #                    const=sum, default=max,
-    #                    help='sum the integers (default: find the max)')
+    parser.add_argument('--batch', type=int, default=6)
 
     global args
     args = parser.parse_args()
@@ -91,10 +91,11 @@ def mapper(dataset_dict):
         for annotation in dataset_dict.pop("annotations")
     ]
     return {
-       # create the format that the model expects
-       "image": image,
-       "instances": utils.annotations_to_instances(annos, image.shape[1:])
+        # create the format that the model expects
+        "image": image,
+        "instances": utils.annotations_to_instances(annos, image.shape[1:])
     }
+
 
 def res_single(path, override=True, save_to=None):
     img = cv2.imread(path)
