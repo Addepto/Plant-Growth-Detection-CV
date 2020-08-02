@@ -10,6 +10,7 @@ import torch
 
 from detectron2.data import detection_utils as utils
 import detectron2.data.transforms as T
+from detectron2.utils.visualizer import Visualizer
 
 args = None
 
@@ -79,22 +80,46 @@ def resize(img_path):
             cv2.imwrite(path, img)
 
 
-def mapper(dataset_dict):
+def mapper(dataset_dict, debug=True):
     dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
     # can use other ways to read image
     image = utils.read_image(dataset_dict["file_name"], format="BGR")
     # can use other augmentations
-    transform = T.Resize((800, 800)).get_transform(image)
-    image = torch.from_numpy(transform.apply_image(image).transpose(2, 0, 1))
+    transform_list = [
+        T.RandomCrop(crop_type='relative', crop_size=(0.8, 0.8)),
+        T.RandomFlip(prob=0.5, horizontal=True, vertical=False),
+        T.RandomRotation(angle=[-30, 30], expand=True, center=None, sample_style='range', interp=cv2.INTER_CUBIC),
+        T.RandomLighting(scale=0.1),
+        T.RandomSaturation(intensity_min=0.9, intensity_max=1.1),
+        T.RandomContrast(intensity_min=0.9, intensity_max=1.1)
+    ]
+    image, transforms = T.apply_transform_gens(transform_list, image)
+    image = torch.as_tensor(image.transpose(2, 0, 1).astype('float32'))
+
     annos = [
-        utils.transform_instance_annotations(annotation, [transform], image.shape[1:])
+        utils.transform_instance_annotations(annotation, transforms, image.shape[1:])
         for annotation in dataset_dict.pop("annotations")
     ]
-    return {
-        # create the format that the model expects
-        "image": image,
-        "instances": utils.annotations_to_instances(annos, image.shape[1:])
-    }
+    dataset_dict["image"] = torch.as_tensor(image)
+    instances = utils.annotations_to_instances(annos, image.shape[1:])
+    dataset_dict["instances"] = utils.filter_empty_instances(instances)
+
+    if debug:
+        output_directory = r'./dataset/debug_mapper'
+        os.makedirs(output_directory, exist_ok=True)
+        output_path = os.path.join(output_directory, os.path.basename(dataset_dict["file_name"]))
+        img = image.numpy().transpose(1, 2, 0)
+        cv2.imwrite(output_path, img)
+
+        visualizer = Visualizer(img, scale=1)
+        visualizer = visualizer.overlay_instances(masks=instances.gt_masks.to("cpu"),
+                                boxes=instances.gt_boxes.to("cpu"))
+        im = visualizer.get_image()
+        output_path = os.path.join(output_directory,
+                                   os.path.splitext(os.path.basename(dataset_dict["file_name"]))[0] + '_vis.jpg')
+        cv2.imwrite(output_path, im)
+
+    return dataset_dict
 
 
 def res_single(path, override=True, save_to=None):

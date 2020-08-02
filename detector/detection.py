@@ -96,8 +96,8 @@ class Detection(object):
         return cfg
 
     def train(self):
-        mapper = None
-        trainer = DefaultTrainer(self.cfg, mapper=mapper)
+        mapper_method = mapper
+        trainer = DefaultTrainer(self.cfg, mapper=mapper_method)
         trainer.resume_or_load(resume=self.args.resume)
         trainer.train()
 
