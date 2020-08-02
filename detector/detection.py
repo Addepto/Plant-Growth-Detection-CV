@@ -1,5 +1,7 @@
 import json
 import os
+from functools import partial
+
 import cv2
 
 import torch
@@ -96,7 +98,7 @@ class Detection(object):
         return cfg
 
     def train(self):
-        mapper_method = mapper
+        mapper_method = partial(mapper, debug=self.debug)
         trainer = DefaultTrainer(self.cfg, mapper=mapper_method)
         trainer.resume_or_load(resume=self.args.resume)
         trainer.train()

@@ -80,7 +80,7 @@ def resize(img_path):
             cv2.imwrite(path, img)
 
 
-def mapper(dataset_dict, debug=True):
+def mapper(dataset_dict, debug=False):
     dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
     # can use other ways to read image
     image = utils.read_image(dataset_dict["file_name"], format="BGR")
