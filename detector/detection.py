@@ -19,7 +19,7 @@ from utils import get_categories, pred2tg, mapper
 
 class Detection(object):
 
-    def __init__(self, args,to_train, numb_classes, logger, output,model_iter ):
+    def __init__(self, args, to_train, numb_classes, logger, output, model_iter):
         self.args = args
         self.cat = get_categories(args.label_type, args.unfocused)
         self.metadata = MetadataCatalog.get("burak_test").set(thing_classes=self.cat)
@@ -36,10 +36,11 @@ class Detection(object):
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
         self.logger.info("DEBUG: {}".format(self.debug))
-        self.logger.info('label_type: {}'.format(self.args.label_type))
+        self.logger.info('Label_type: {}'.format(self.args.label_type))
         for c in self.cat:
             self.logger.info('\t- {}'.format(c))
-        self.logger.info('model_type: {}'.format(self.args.model_yml))
+        self.logger.info('Model_type: {}'.format(self.args.model_yml))
+        self.logger.info('Aug enabled: {}'.format(self.args.aug))
         self.logger.info("Numb classes: {}".format(self.numb_classes))
         self.logger.info("Unfocused: {}".format(self.args.unfocused))
         self.logger.info("Output dir: {}".format(self.output))
@@ -50,22 +51,20 @@ class Detection(object):
         if self.args.model_path:
             cfg.MODEL.WEIGHTS = self.args.model_path
         else:
-            model_zoo.get_checkpoint_url(self.args.model_yml)
+            cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url(self.args.model_yml)
 
         cfg.DATASETS.TRAIN = ("burak_train",)
         cfg.DATASETS.TEST = ("burak_test",)
 
         cfg.MODEL.ROI_HEADS.NUM_CLASSES = self.numb_classes
-        cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 256
 
         if device == 'cpu':
-            self.logger.info('DEVICE: {}'.format(device))
+            self.logger.info('Device: {}'.format(device))
             cfg.MODEL.DEVICE = 'cpu'
 
         if self.to_train:
 
             cfg.OUTPUT_DIR = self.output
-            cfg.MODEL.ROI_HEADS.NUM_CLASSES = self.numb_classes
             if self.debug:
                 cfg.DATALOADER.NUM_WORKERS = 1
                 cfg.SOLVER.IMS_PER_BATCH = 1
@@ -77,15 +76,17 @@ class Detection(object):
                 cfg.SOLVER.CHECKPOINT_PERIOD = 250
                 cfg.TEST.EVAL_PERIOD = 50000
 
+
             else:
-                cfg.DATALOADER.NUM_WORKERS = 4
+                cfg.DATALOADER.NUM_WORKERS = 8
                 cfg.SOLVER.IMS_PER_BATCH = self.args.batch
+                cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 256
                 cfg.SOLVER.BASE_LR = self.args.lr
                 cfg.SOLVER.WARMUP_ITERS = 5000
-                cfg.SOLVER.MAX_ITER = 50000
-                cfg.SOLVER.STEPS = (15000, 22500)
+                cfg.SOLVER.MAX_ITER = 60000
+                cfg.SOLVER.STEPS = (15000, 22500, 30000, 40000)
                 cfg.SOLVER.GAMMA = 0.1
-                cfg.SOLVER.CHECKPOINT_PERIOD = 2500
+                cfg.SOLVER.CHECKPOINT_PERIOD = 5000
 
                 cfg.TEST.EVAL_PERIOD = 50000
 
@@ -93,12 +94,14 @@ class Detection(object):
         else:
             self.logger.info("Model path: {}".format(self.args.model_path))
 
-            cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = self.args.thrs
+            cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = self.args.thrsh
 
         return cfg
 
     def train(self):
-        mapper_method = partial(mapper, debug=self.debug)
+
+        mapper_method = partial(mapper, debug=self.debug) if self.args.aug else None
+
         trainer = DefaultTrainer(self.cfg, mapper=mapper_method)
         trainer.resume_or_load(resume=self.args.resume)
         trainer.train()
@@ -130,7 +133,7 @@ class Detection(object):
         if not os.path.exists(p):
             os.makedirs(p)
 
-    def cust_eval(self):
+    def cust_eval(self, root_images_path, test_datadict_path):
         predictor = DefaultPredictor(self.cfg)
 
         save_to = os.path.join(self.output, 'results', self.model_iter)
@@ -138,7 +141,7 @@ class Detection(object):
         save_to_dir = os.path.join(save_to, 'JPEGImages')
         self.prep_dir(save_to_dir)
 
-        with open(self.test_datadict_path, 'r')as f:
+        with open(test_datadict_path, 'r')as f:
             data = json.load(f)
 
             id2image = {i['id']: i['file_name'] for i in data['images']}
@@ -157,7 +160,7 @@ class Detection(object):
 
                 file_name = id2image[img_id]
 
-                img_path = os.path.join(self.root_images_path, file_name)
+                img_path = os.path.join(root_images_path, file_name)
 
                 bbox = record['bbox']
                 cat_id = record['category_id']

@@ -1,5 +1,4 @@
 import os
-
 from utils import get_args
 from gen_json import prepare_data
 from utils import labeltype2nclass
@@ -45,8 +44,8 @@ if __name__ == '__main__':
 
     if is_train:
         det.train()
-    if args.eval_after or not is_train:
+    if args.eval_after_train or not is_train:
         # Default COCO evaluation, calculates AP metric
         # det.eval()
         # Custom COCO evaluation, calculates accuracy metric
-        det.cust_eval()
+        det.cust_eval(root_images_path,test_datadict_path)

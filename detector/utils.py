@@ -17,7 +17,10 @@ args = None
 
 def get_args():
     list_of_models = ['COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml',
-                      "Misc/cascade_mask_rcnn_R_50_FPN_3x.yaml"]
+                      "COCO-InstanceSegmentation/mask_rcnn_X_101_32x8d_FPN_3x.yaml",
+                      "Misc/cascade_mask_rcnn_R_50_FPN_3x.yaml",
+                      "Misc/mask_rcnn_R_50_FPN_3x_dconv_c3-c5.yaml"
+                      ]
     parser = argparse.ArgumentParser()
     parser.add_argument('mode', type=str, choices=['train', 'test'],
                         help='train or test')
@@ -38,6 +41,7 @@ def get_args():
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--unfocused', action='store_true')
     parser.add_argument('--resume', action='store_true')
+    parser.add_argument('--aug', action='store_true')
     parser.add_argument('--eval_after_train', action='store_true')
     parser.add_argument('--override_tt', action='store_true', help='override train/test data_dicts')
     parser.add_argument('--sf', action='store_true', help='skip unfocused class')
@@ -86,12 +90,14 @@ def mapper(dataset_dict, debug=False):
     image = utils.read_image(dataset_dict["file_name"], format="BGR")
     # can use other augmentations
     transform_list = [
-        T.RandomCrop(crop_type='relative', crop_size=(0.8, 0.8)),
+        T.RandomApply(T.RandomCrop(crop_type='relative', crop_size=(0.8, 0.8)), prob=.3),
         T.RandomFlip(prob=0.5, horizontal=True, vertical=False),
-        T.RandomRotation(angle=[-30, 30], expand=True, center=None, sample_style='range', interp=cv2.INTER_CUBIC),
-        T.RandomLighting(scale=0.1),
-        T.RandomSaturation(intensity_min=0.9, intensity_max=1.1),
-        T.RandomContrast(intensity_min=0.9, intensity_max=1.1)
+        T.RandomApply(
+            T.RandomRotation(angle=[-30, 30], expand=True, center=None, sample_style='range', interp=cv2.INTER_CUBIC),
+            prob=0.5),
+        # T.RandomLighting(scale=0.1),
+        # T.RandomSaturation(intensity_min=0.9, intensity_max=1.1),
+        # T.RandomContrast(intensity_min=0.9, intensity_max=1.1)
     ]
     image, transforms = T.apply_transform_gens(transform_list, image)
     image = torch.as_tensor(image.transpose(2, 0, 1).astype('float32'))
@@ -113,7 +119,7 @@ def mapper(dataset_dict, debug=False):
 
         visualizer = Visualizer(img, scale=1)
         visualizer = visualizer.overlay_instances(masks=instances.gt_masks.to("cpu"),
-                                boxes=instances.gt_boxes.to("cpu"))
+                                                  boxes=instances.gt_boxes.to("cpu"))
         im = visualizer.get_image()
         output_path = os.path.join(output_directory,
                                    os.path.splitext(os.path.basename(dataset_dict["file_name"]))[0] + '_vis.jpg')
