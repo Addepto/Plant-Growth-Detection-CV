@@ -197,7 +197,7 @@ def test_read():
 
     # root_path = './subset'
     root_path = './subset'
-    root_path = '/home/volodymyr/Desktop/add/dataset/kws'
+    root_path = ''
     images, masks = read_data(root_path)
 
     resize_save(masks, 'masks')
@@ -236,11 +236,11 @@ def read_jsons(img_path):
 def read_data_and_save_mask(root_path):
     pass
 
-    mask_path = '/home/volodymyr/Desktop/add/kws_poc/detector/dataset/test_test'
+    mask_path = ''
 
     prep_dir(mask_path)
 
-    save_new_masks_path = '/home/volodymyr/Desktop/add/kws_poc/detector/dataset/current/save_new_masks'
+    save_new_masks_path = ''
 
     images = {}
 
@@ -304,6 +304,6 @@ def assert_content(orig, ref):
 if __name__ == '__main__':
     DEBUG = False
 
-    read_data_and_save_mask('/home/volodymyr/Downloads/results')
-    assert_content('/home/volodymyr/Downloads/results',
-                   '/home/volodymyr/Desktop/add/kws_poc/detector/dataset/current/save_new_masks', )
+    read_data_and_save_mask('')
+    assert_content('',
+                   '', )
