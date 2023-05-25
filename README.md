@@ -10,10 +10,12 @@ Sugar beet, an important commercial crop, has specific growth stages. Understand
 To get a local copy up and running, follow these steps:
 
 **Prerequisites**
+
 Python 3.7+
 Git
 
 **Installation**
+
 1. Clone the repo
 
 bash
@@ -26,6 +28,7 @@ Copy code
 pip install -r requirements.txt
 
 **Usage**
+
 To use the model, follow these steps:
 Place your images in the 'input_images' folder.
 Run the main script:
@@ -36,4 +39,5 @@ python main.py
 The results will be in the 'output_results' folder.
 
 **License**
+
 Distributed under the MIT License. See LICENSE for more information.
